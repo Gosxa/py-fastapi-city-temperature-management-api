@@ -1,4 +1,3 @@
-# api/temperature.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.schemas import temperature as schemas
@@ -28,7 +27,14 @@ def list_temperatures(city_id: int = None, db: Session = Depends(get_db)):
 async def update_temperatures(db: Session = Depends(get_db)):
     cities = db.query(models.City).all()
     results = await asyncio.gather(*(fetch_temperature_async(city.name) for city in cities))
+
     for city, temp in zip(cities, results):
         if temp is not None:
-            crud.create_temperature(db, schemas.TemperatureCreate(city_id=city.id, temperature=temp))
+            await asyncio.to_thread(
+                crud.create_temperature,
+                db,
+                schemas.TemperatureCreate(city_id=city.id, temperature=temp)
+            )
+
     return {"message": "Temperatures updated."}
+
